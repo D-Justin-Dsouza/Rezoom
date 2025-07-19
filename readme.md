@@ -1,4 +1,4 @@
-# Rezoom: The Dynamic Resume & Portfolio Generator  
+# Rezoom: The Dynamic Resume Generator  
 
 Rezoom is a fun project built by students to make creating resumes super easy and hassle-free. It combines a clean design with a solid backend to help users quickly build professional resumes and download them as PDFs.  
 This project was created during a hackathon to learn backend development in Go while using a modern frontend stack like Next.js and Tailwind CSS.  
