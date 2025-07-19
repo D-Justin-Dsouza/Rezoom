@@ -23,6 +23,7 @@ func main() {
 	api := router.Group("/api")
 	{
 		api.POST("/register", controllers.Register)
+		api.POST("/login", controllers.Login)
 	}
 
 	log.Println("Starting Go API server on http://localhost:8080")

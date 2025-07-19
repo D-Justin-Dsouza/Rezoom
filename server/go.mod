@@ -5,6 +5,7 @@ go 1.23.0
 require (
 	github.com/gin-contrib/cors v1.7.6
 	github.com/glebarez/sqlite v1.11.0
+	github.com/golang-jwt/jwt/v5 v5.2.3
 )
 
 require (

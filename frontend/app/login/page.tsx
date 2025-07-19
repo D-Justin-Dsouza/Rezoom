@@ -1,98 +1,145 @@
-"use client"
+'use client'; // This directive is necessary for using hooks like useState
 
-import type React from "react"
-
-import { useState } from "react"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { FileText, Eye, EyeOff } from "lucide-react"
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false)
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  })
+  // State hooks to store the values from the input fields
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    // TODO: Integrate with Go backend API
-    console.log("Login attempt:", formData)
-  }
+  // State for handling errors and loading status
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const router = useRouter();
+
+  // This function will be called when the form is submitted
+  const handleSubmit = async (e: { preventDefault: () => void; }) => {
+    e.preventDefault(); // Prevent the default form submission behavior
+
+    // Basic validation
+    if (!email || !password) {
+      setError('Email and password are required.');
+      return;
+    }
+
+    setError('');
+    setLoading(true);
+
+    try {
+      // --- API Call to the Go Backend ---
+      const response = await fetch('http://localhost:8080/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Handle errors from the server (e.g., invalid credentials)
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // --- Handle Success ---
+      // On successful login, store the JWT in the browser's localStorage.
+      // This allows us to keep the user logged in.
+      localStorage.setItem('token', data.token);
+
+      // Redirect the user to their dashboard or main app page
+      router.push('/dashboard'); // We'll create this page next
+
+    } catch (err) {
+      // --- Handle Errors ---
+      setError((err instanceof Error) ? err.message : 'An unknown error occurred');
+      console.error('Login failed:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
+    <div className="flex min-h-screen items-center justify-center bg-gray-100">
+      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-md">
         <div className="text-center">
-          <Link href="/" className="flex items-center justify-center mb-6">
-            <FileText className="h-8 w-8 mr-2" />
-            <span className="text-2xl font-bold">Rezoom</span>
-          </Link>
+          <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+            Welcome back
+          </h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Enter your credentials to access your account
+          </p>
         </div>
 
-        <Card>
-          <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
-            <CardDescription className="text-center">Enter your credentials to access your account</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    required
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                    onClick={() => setShowPassword(!showPassword)}
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-              <div className="flex items-center justify-between">
-                <Link href="/forgot-password" className="text-sm text-primary hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
-              <Button type="submit" className="w-full">
-                Sign In
-              </Button>
-            </form>
-            <div className="mt-6 text-center">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Don't have an account?{" "}
-                <Link href="/register" className="text-primary hover:underline">
-                  Sign up
-                </Link>
-              </p>
+        <form className="space-y-6" onSubmit={handleSubmit}>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Email address
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+
+          {/* Display error messages here */}
+          {error && (
+            <div className="rounded-md bg-red-50 p-4">
+              <p className="text-sm font-medium text-red-800">{error}</p>
             </div>
-          </CardContent>
-        </Card>
+          )}
+
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              <a href="#" className="font-medium text-indigo-600 hover:text-indigo-500">
+                Forgot your password?
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full justify-center rounded-md border border-transparent bg-indigo-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
+            >
+              {loading ? 'Signing In...' : 'Sign In'}
+            </button>
+          </div>
+        </form>
+        
+        <p className="mt-4 text-center text-sm text-gray-600">
+          Don't have an account?{' '}
+          <a href="/signup" className="font-medium text-indigo-600 hover:text-indigo-500">
+            Sign up
+          </a>
+        </p>
+
       </div>
     </div>
-  )
+  );
 }
