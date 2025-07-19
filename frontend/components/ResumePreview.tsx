@@ -1,3 +1,5 @@
+"use client"
+
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 
@@ -24,15 +26,15 @@ interface ResumeData {
 }
 
 interface ResumePreviewProps {
-  resume?: ResumeData; // Made resume prop optional
+  resume: ResumeData;
 }
 
-// This is a forwardRef component, which allows us to target it for the PDF generation
-const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps>(({ resume = {} }, ref) => {
+// This is a forwardRef component, which allows us to target it for PDF generation
+const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps>(({ resume }, ref) => {
   const { personalInfo = {}, summary, skills = [], experiences = [], education = [], projects = [] } = resume;
 
   return (
-    <div ref={ref} className="bg-white p-6 min-h-[600px] aspect-[8.5/11]">
+    <div ref={ref} className="bg-white border rounded-lg p-6 shadow-sm min-h-[600px] aspect-[8.5/11]">
       <div className="space-y-4">
         {/* Header */}
         <div className="text-center border-b pb-4">
