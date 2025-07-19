@@ -1,0 +1,425 @@
+"use client"
+
+import { useState, useEffect } from "react"
+import Link from "next/link"
+import { useRouter, useParams } from "next/navigation" // CORRECTED: Using 'next/navigation' for the App Router
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { FileText, Save, Eye, Download, Plus, X, ArrowLeft } from "lucide-react"
+
+// Interfaces for your resume data structure
+interface PersonalInfo {
+  firstName: string; lastName: string; email: string; phone: string; location: string; website: string; linkedin: string; github: string;
+}
+interface Experience {
+  id: string; company: string; position: string; startDate: string; endDate: string; current: boolean; description: string;
+}
+interface Education {
+  id: string; institution: string; degree: string; field: string; startDate: string; endDate: string; gpa?: string;
+}
+interface Project {
+  id: string; name: string; description: string; technologies: string[]; url?: string; github?: string;
+}
+
+export default function BuilderPage() {
+  const router = useRouter();
+  const params = useParams();
+  const resumeId = params.id ? params.id[0] : null;
+
+  // All your state hooks
+  const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
+    firstName: "", lastName: "", email: "", phone: "", location: "", website: "", linkedin: "", github: "",
+  });
+  const [summary, setSummary] = useState("");
+  const [skills, setSkills] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState("");
+  const [experiences, setExperiences] = useState<Experience[]>([]);
+  const [education, setEducation] = useState<Education[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [title, setTitle] = useState("Untitled Resume");
+
+
+  // This useEffect fetches data if we are in "edit" mode
+  useEffect(() => {
+    if (resumeId) {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        router.push('/login');
+        return;
+      }
+      
+      const fetchResumeData = async () => {
+        setLoading(true);
+        try {
+          const response = await fetch(`http://localhost:8080/api/resumes/${resumeId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (!response.ok) throw new Error("Failed to fetch resume data.");
+          
+          const data = await response.json();
+          setTitle(data.resume.title);
+          const resumeContent = JSON.parse(data.resume.content || '{}');
+          
+          // Populate all state with fetched data
+          setPersonalInfo(resumeContent.personalInfo || {});
+          setSummary(resumeContent.summary || "");
+          setSkills(resumeContent.skills || []);
+          setExperiences(resumeContent.experiences || []);
+          setEducation(resumeContent.education || []);
+          setProjects(resumeContent.projects || []);
+        } catch (err: any) {
+          setError(err.message);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchResumeData();
+    }
+  }, [resumeId, router]);
+
+  const handleSave = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    const resumeData = {
+      personalInfo, summary, skills, experiences, education, projects,
+    };
+    const contentJSON = JSON.stringify(resumeData);
+    const newTitle = `${personalInfo.firstName} ${personalInfo.lastName}'s Resume`.trim() === "'s Resume" ? "Untitled Resume" : `${personalInfo.firstName} ${personalInfo.lastName}'s Resume`;
+
+    const isEditing = !!resumeId;
+    const url = isEditing ? `http://localhost:8080/api/resumes/${resumeId}` : 'http://localhost:8080/api/resumes';
+    const method = isEditing ? 'PUT' : 'POST';
+
+    try {
+      const response = await fetch(url, {
+        method: method,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ title: newTitle, content: contentJSON }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save resume.');
+      }
+      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ... (Keep all your other functions: addSkill, removeSkill, etc.)
+  const addSkill = () => { if (newSkill.trim() && !skills.includes(newSkill.trim())) { setSkills([...skills, newSkill.trim()]); setNewSkill(""); } };
+  const removeSkill = (skill: string) => { setSkills(skills.filter((s) => s !== skill)); };
+  const addExperience = () => { setExperiences([...experiences, { id: Date.now().toString(), company: "", position: "", startDate: "", endDate: "", current: false, description: "" }]); };
+  const updateExperience = (id: string, field: keyof Experience, value: any) => { setExperiences(experiences.map((exp) => (exp.id === id ? { ...exp, [field]: value } : exp))); };
+  const removeExperience = (id: string) => { setExperiences(experiences.filter((exp) => exp.id !== id)); };
+  const addEducation = () => { setEducation([...education, { id: Date.now().toString(), institution: "", degree: "", field: "", startDate: "", endDate: "" }]); };
+  const updateEducation = (id: string, field: keyof Education, value: any) => { setEducation(education.map((edu) => (edu.id === id ? { ...edu, [field]: value } : edu))); };
+  const removeEducation = (id: string) => { setEducation(education.filter((edu) => edu.id !== id)); };
+  const addProject = () => { setProjects([...projects, { id: Date.now().toString(), name: "", description: "", technologies: [] }]); };
+  const updateProject = (id: string, field: keyof Project, value: any) => { setProjects(projects.map((proj) => (proj.id === id ? { ...proj, [field]: value } : proj))); };
+  const removeProject = (id: string) => { setProjects(projects.filter((proj) => proj.id !== id)); };
+
+  if (loading && resumeId) {
+      return <div className="flex h-screen items-center justify-center">Loading resume for editing...</div>;
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center py-4">
+            <div className="flex items-center space-x-4">
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/dashboard">
+                  <ArrowLeft className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Link>
+              </Button>
+              <div className="flex items-center">
+                <FileText className="h-6 w-6 mr-2" />
+                <span className="text-lg font-semibold">Resume Builder</span>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button variant="outline" size="sm">
+                <Eye className="h-4 w-4 mr-2" />
+                Preview
+              </Button>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Download PDF
+              </Button>
+              <Button size="sm" onClick={handleSave} disabled={loading}>
+                <Save className="h-4 w-4 mr-2" />
+                {loading ? 'Saving...' : 'Save'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && <div className="bg-red-100 text-red-700 p-3 rounded-md mb-4">{error}</div>}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Form Section */}
+          <div className="space-y-6">
+            <Tabs defaultValue="personal" className="w-full">
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="personal">Personal</TabsTrigger>
+                <TabsTrigger value="experience">Experience</TabsTrigger>
+                <TabsTrigger value="education">Education</TabsTrigger>
+                <TabsTrigger value="skills">Skills</TabsTrigger>
+                <TabsTrigger value="projects">Projects</TabsTrigger>
+              </TabsList>
+              {/* ... All your TabsContent components go here, they don't need to be changed ... */}
+               <TabsContent value="personal" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Personal Information</CardTitle>
+                    <CardDescription>Basic information that will appear on your resume</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="firstName">First Name</Label>
+                        <Input
+                          id="firstName"
+                          value={personalInfo.firstName}
+                          onChange={(e) => setPersonalInfo({ ...personalInfo, firstName: e.target.value })}
+                          placeholder="John"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="lastName">Last Name</Label>
+                        <Input
+                          id="lastName"
+                          value={personalInfo.lastName}
+                          onChange={(e) => setPersonalInfo({ ...personalInfo, lastName: e.target.value })}
+                          placeholder="Doe"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={personalInfo.email}
+                        onChange={(e) => setPersonalInfo({ ...personalInfo, email: e.target.value })}
+                        placeholder="john@example.com"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                          id="phone"
+                          value={personalInfo.phone}
+                          onChange={(e) => setPersonalInfo({ ...personalInfo, phone: e.target.value })}
+                          placeholder="+1 (555) 123-4567"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="location">Location</Label>
+                        <Input
+                          id="location"
+                          value={personalInfo.location}
+                          onChange={(e) => setPersonalInfo({ ...personalInfo, location: e.target.value })}
+                          placeholder="New York, NY"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="website">Website</Label>
+                      <Input
+                        id="website"
+                        value={personalInfo.website}
+                        onChange={(e) => setPersonalInfo({ ...personalInfo, website: e.target.value })}
+                        placeholder="https://johndoe.com"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="linkedin">LinkedIn</Label>
+                        <Input
+                          id="linkedin"
+                          value={personalInfo.linkedin}
+                          onChange={(e) => setPersonalInfo({ ...personalInfo, linkedin: e.target.value })}
+                          placeholder="linkedin.com/in/johndoe"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="github">GitHub</Label>
+                        <Input
+                          id="github"
+                          value={personalInfo.github}
+                          onChange={(e) => setPersonalInfo({ ...personalInfo, github: e.target.value })}
+                          placeholder="github.com/johndoe"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="summary">Professional Summary</Label>
+                      <Textarea
+                        id="summary"
+                        value={summary}
+                        onChange={(e) => setSummary(e.target.value)}
+                        placeholder="Write a brief summary of your professional background and goals..."
+                        rows={4}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+               <TabsContent value="experience" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Work Experience</CardTitle>
+                        <CardDescription>Add your work experience in reverse chronological order</CardDescription>
+                      </div>
+                      <Button onClick={addExperience} size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Experience
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {experiences.map((exp) => (
+                      <div key={exp.id} className="border rounded-lg p-4 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-medium">Experience Entry</h4>
+                          <Button variant="ghost" size="sm" onClick={() => removeExperience(exp.id)}>
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Company</Label>
+                            <Input
+                              value={exp.company}
+                              onChange={(e) => updateExperience(exp.id, "company", e.target.value)}
+                              placeholder="Company Name"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Position</Label>
+                            <Input
+                              value={exp.position}
+                              onChange={(e) => updateExperience(exp.id, "position", e.target.value)}
+                              placeholder="Job Title"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Start Date</Label>
+                            <Input
+                              type="month"
+                              value={exp.startDate}
+                              onChange={(e) => updateExperience(exp.id, "startDate", e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>End Date</Label>
+                            <Input
+                              type="month"
+                              value={exp.endDate}
+                              onChange={(e) => updateExperience(exp.id, "endDate", e.target.value)}
+                              disabled={exp.current}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`current-${exp.id}`}
+                            checked={exp.current}
+                            onChange={(e) => updateExperience(exp.id, "current", e.target.checked)}
+                          />
+                          <Label htmlFor={`current-${exp.id}`}>I currently work here</Label>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Description</Label>
+                          <Textarea
+                            value={exp.description}
+                            onChange={(e) => updateExperience(exp.id, "description", e.target.value)}
+                            placeholder="Describe your responsibilities and achievements..."
+                            rows={3}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    {experiences.length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        No work experience added yet. Click "Add Experience" to get started.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* Preview Section */}
+          <div className="lg:sticky lg:top-24">
+            <Card className="h-fit">
+              <CardHeader>
+                <CardTitle>Live Preview</CardTitle>
+                <CardDescription>See how your resume looks in real-time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-white border rounded-lg p-6 shadow-sm min-h-[600px] aspect-[8.5/11]">
+                   {/* ... Your entire preview JSX goes here, it doesn't need to be changed ... */}
+                   <div className="space-y-4">
+                    {/* Header */}
+                    <div className="text-center border-b pb-4">
+                      <h1 className="text-2xl font-bold">
+                        {personalInfo.firstName || "Your"}{" "}{personalInfo.lastName || "Name"}
+                      </h1>
+                      <div className="flex justify-center flex-wrap gap-x-3 text-xs text-gray-600">
+                        {personalInfo.email && <span>{personalInfo.email}</span>}
+                        {personalInfo.phone && <span>• {personalInfo.phone}</span>}
+                        {personalInfo.location && <span>• {personalInfo.location}</span>}
+                      </div>
+                    </div>
+                    {/* Summary */}
+                    {summary && (
+                      <div>
+                        <h2 className="text-lg font-semibold mb-2 border-b">Professional Summary</h2>
+                        <p className="text-sm text-gray-700">{summary}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </main>
+    </div>
+  )
+}

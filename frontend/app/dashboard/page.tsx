@@ -2,32 +2,29 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation" // Using 'next/navigation' for the App Router
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { FileText, Plus, MoreHorizontal, Eye, Download, Share, Edit, Trash2, Globe } from "lucide-react"
 
-// This interface now matches our Go model's JSON output
 interface Portfolio {
-  ID: string; // Changed from id to ID
+  ID: string; // Matches the Go model's JSON output
   title: string;
-  // These are placeholder fields until we add them to the backend
+  UpdatedAt: string; // We get this from the backend
+  // Placeholder fields
   template: string;
-  lastModified: string;
   status: "draft" | "published";
   url?: string;
 }
 
 export default function DashboardPage() {
-  // The initial state is now an empty array
   const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const router = useRouter();
 
-  // This hook runs once when the component mounts to fetch data
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
@@ -38,9 +35,7 @@ export default function DashboardPage() {
     const fetchResumes = async () => {
       try {
         const response = await fetch('http://localhost:8080/api/resumes', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
+          headers: { 'Authorization': `Bearer ${token}` }
         });
 
         if (!response.ok) {
@@ -48,19 +43,11 @@ export default function DashboardPage() {
             localStorage.removeItem('token');
             router.push('/login');
           }
-          throw new Error('Failed to fetch your resumes. Please try logging in again.');
+          throw new Error('Failed to fetch resumes.');
         }
 
         const data = await response.json();
-        // Map the backend data to our frontend interface
-        const formattedPortfolios = (data.resumes || []).map((p: any) => ({
-          ...p,
-          template: "Modern Professional", // Placeholder
-          lastModified: new Date(p.UpdatedAt).toLocaleDateString(),
-          status: 'published', // Placeholder
-        }));
-        setPortfolios(formattedPortfolios);
-
+        setPortfolios(data.resumes || []);
       } catch (err: any) {
         setError(err.message);
       } finally {
@@ -71,9 +58,31 @@ export default function DashboardPage() {
     fetchResumes();
   }, [router]);
 
-  const handleDelete = (id: string) => {
-    // This will require a DELETE /api/resumes/:id endpoint in the future
+  const handleDelete = async (id: string) => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+    
+    // Optimistically update the UI
+    const originalPortfolios = [...portfolios];
     setPortfolios(portfolios.filter((p) => p.ID !== id));
+
+    try {
+      const response = await fetch(`http://localhost:8080/api/resumes/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        // If the delete fails, revert the UI change and show an error
+        setPortfolios(originalPortfolios);
+        throw new Error("Failed to delete resume.");
+      }
+    } catch (err: any) {
+      setError(err.message);
+    }
   };
 
   const handleSignOut = () => {
@@ -81,13 +90,8 @@ export default function DashboardPage() {
     router.push('/login');
   };
 
-  if (loading) {
-    return <div className="flex h-screen items-center justify-center">Loading your dashboard...</div>;
-  }
-
-  if (error) {
-    return <div className="flex h-screen items-center justify-center text-red-500">Error: {error}</div>;
-  }
+  if (loading) return <div className="flex h-screen items-center justify-center">Loading dashboard...</div>;
+  if (error) return <div className="flex h-screen items-center justify-center text-red-500">Error: {error}</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -145,24 +149,7 @@ export default function DashboardPage() {
               <div className="text-2xl font-bold">{portfolios.length}</div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Published</CardTitle>
-              <Globe className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{portfolios.filter((p) => p.status === "published").length}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Drafts</CardTitle>
-              <Edit className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{portfolios.filter((p) => p.status === "draft").length}</div>
-            </CardContent>
-          </Card>
+          {/* You can add logic for published/drafts later */}
         </div>
 
         {/* Portfolios Grid */}
@@ -173,7 +160,7 @@ export default function DashboardPage() {
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <CardTitle className="text-lg">{portfolio.title}</CardTitle>
-                    <CardDescription>{portfolio.template}</CardDescription>
+                    <CardDescription>Modern Professional</CardDescription>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -188,20 +175,6 @@ export default function DashboardPage() {
                           Edit
                         </Link>
                       </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Eye className="h-4 w-4 mr-2" />
-                        Preview
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Download className="h-4 w-4 mr-2" />
-                        Download PDF
-                      </DropdownMenuItem>
-                      {portfolio.url && (
-                        <DropdownMenuItem>
-                          <Share className="h-4 w-4 mr-2" />
-                          Share URL
-                        </DropdownMenuItem>
-                      )}
                       <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(portfolio.ID)}>
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
@@ -213,14 +186,9 @@ export default function DashboardPage() {
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
-                    <Badge variant={portfolio.status === "published" ? "default" : "secondary"}>
-                      {portfolio.status}
-                    </Badge>
-                    <span className="text-sm text-gray-500">{portfolio.lastModified}</span>
+                    <Badge variant={"default"}>Published</Badge>
+                    <span className="text-sm text-gray-500">{new Date(portfolio.UpdatedAt).toLocaleDateString()}</span>
                   </div>
-                  {portfolio.url && (
-                    <div className="text-sm text-blue-600 dark:text-blue-400 truncate">{portfolio.url}</div>
-                  )}
                   <div className="flex space-x-2">
                     <Button size="sm" variant="outline" asChild className="flex-1 bg-transparent">
                       <Link href={`/builder/${portfolio.ID}`}>

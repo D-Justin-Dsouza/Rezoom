@@ -32,6 +32,9 @@ func main() {
 		{
 			protected.POST("/resumes", controllers.CreateResume)
 			protected.GET("/resumes", controllers.GetResumes)
+			protected.GET("/resumes/:id", controllers.GetResumeByID)
+			protected.PUT("/resumes/:id", controllers.UpdateResume)
+			protected.DELETE("/resumes/:id", controllers.DeleteResume)
 		}
 	}
 

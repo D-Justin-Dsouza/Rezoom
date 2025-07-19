@@ -80,3 +80,59 @@ func GetResumes(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"resumes": resumes})
 }
+
+func GetResumeByID(c *gin.Context) {
+	id := c.Param("id")
+	userID, _ := c.Get("userID")
+
+	var resume models.Resume
+	if err := database.DB.Where("id = ? AND user_id = ?", id, userID).First(&resume).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Resume not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"resume": resume})
+}
+
+func UpdateResume(c *gin.Context) {
+	id := c.Param("id")
+	userID, _ := c.Get("userID")
+
+	var resume models.Resume
+	if err := database.DB.Where("id = ? AND user_id = ?", id, userID).First(&resume).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Resume not found or you don't have permission to edit it"})
+		return
+	}
+
+	var input struct {
+		Title   string `json:"title"`
+		Content string `json:"content"`
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
+		return
+	}
+
+	// Update the resume fields
+	resume.Title = input.Title
+	resume.Content = input.Content
+	database.DB.Save(&resume)
+
+	c.JSON(http.StatusOK, gin.H{"message": "Resume updated successfully", "resume": resume})
+}
+
+func DeleteResume(c *gin.Context) {
+	id := c.Param("id")
+	userID, _ := c.Get("userID")
+
+	var resume models.Resume
+	// Use Unscoped() to permanently delete the record
+	// Otherwise, GORM performs a "soft delete" by setting the DeletedAt field
+	if err := database.DB.Unscoped().Where("id = ? AND user_id = ?", id, userID).Delete(&resume).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete resume"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Resume deleted successfully"})
+}
