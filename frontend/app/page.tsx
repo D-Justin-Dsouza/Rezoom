@@ -38,8 +38,8 @@ export default function HomePage() {
                   Build Your Perfect Resume & Portfolio
                 </h1>
                 <p className="mx-auto max-w-[700px] text-gray-500 md:text-xl dark:text-gray-400">
-                  Create stunning, professional resumes and portfolios in minutes. Choose from modern templates, get
-                  real-time previews, and share with a unique URL or download as PDF.
+                  Create stunning, professional resumes in minutes. Choose from modern templates, get
+                  real-time previews, and share with a download as PDF.
                 </p>
               </div>
               <div className="space-x-4">
@@ -66,72 +66,63 @@ export default function HomePage() {
               </div>
             </div>
             <div className="mx-auto grid max-w-5xl items-center gap-6 py-12 lg:grid-cols-3 lg:gap-12">
-              <Card>
+                <Card className="lg:col-span-1">
                 <CardHeader>
                   <Zap className="h-10 w-10 mb-2 text-primary" />
                   <CardTitle>Real-time Preview</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CardDescription>
-                    See your resume update instantly as you type. No more guessing how it will look.
+                  See your resume update instantly as you type. No more guessing how it will look.
                   </CardDescription>
                 </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
-                  <Globe className="h-10 w-10 mb-2 text-primary" />
-                  <CardTitle>Unique URL Hosting</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>
-                    Get a personalized URL to share your portfolio online. Perfect for job applications.
-                  </CardDescription>
-                </CardContent>
-              </Card>
-              <Card>
+                </Card>
+                <Card className="lg:col-span-1">
                 <CardHeader>
                   <Download className="h-10 w-10 mb-2 text-primary" />
                   <CardTitle>PDF Download</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CardDescription>
-                    Export your resume as a high-quality PDF with one click. Print-ready and ATS-friendly.
+                  Export your resume as a high-quality PDF with one click. Print-ready and ATS-friendly.
                   </CardDescription>
                 </CardContent>
-              </Card>
-              <Card>
+                </Card>
+                <Card className="lg:col-span-1">
                 <CardHeader>
                   <FileText className="h-10 w-10 mb-2 text-primary" />
                   <CardTitle>Modern Templates</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <CardDescription>
-                    Choose from professionally designed templates that make your resume stand out.
+                  Choose from professionally designed templates that make your resume stand out.
                   </CardDescription>
                 </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
+                </Card>
+                <div className="lg:col-span-2 flex justify-center space-x-6 px-4">
+                  <Card className="w-full max-w-md">
+                  <CardHeader>
                   <Users className="h-10 w-10 mb-2 text-primary" />
                   <CardTitle>Multiple Portfolios</CardTitle>
-                </CardHeader>
-                <CardContent>
+                  </CardHeader>
+                  <CardContent>
                   <CardDescription>
-                    Create and manage multiple versions of your resume for different job applications.
+                  Create and manage multiple versions of your resume for different job applications.
                   </CardDescription>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader>
+                  </CardContent>
+                  </Card>
+                  <Card className="w-full max-w-md">
+                  <CardHeader>
                   <Shield className="h-10 w-10 mb-2 text-primary" />
                   <CardTitle>Secure & Private</CardTitle>
-                </CardHeader>
-                <CardContent>
+                  </CardHeader>
+                  <CardContent>
                   <CardDescription>
-                    Your data is encrypted and secure. Control who can see your portfolio with privacy settings.
+                  Your data is encrypted and secure. Control who can see your portfolio with privacy settings.
                   </CardDescription>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                  </Card>
+                </div>
             </div>
           </div>
         </section>

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { useRouter, useParams } from "next/navigation" // CORRECTED: Using 'next/navigation' for the App Router
+import { useRouter, useParams } from "next/navigation" 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { FileText, Save, Eye, Download, Plus, X, ArrowLeft } from "lucide-react"
 import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
-import ResumePreview from "@/components/ResumePreview" // CORRECTED: Using path alias
+import ResumePreview from "@/components/ResumePreview" 
 
 // Interfaces for your resume data structure
 interface PersonalInfo {
@@ -47,6 +47,9 @@ export default function BuilderPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // NEW: State for template selection
+  const [template, setTemplate] = useState('modern');
 
   // This useEffect fetches data if we are in "edit" mode
   useEffect(() => {
@@ -74,6 +77,7 @@ export default function BuilderPage() {
           setExperiences(resumeContent.experiences || []);
           setEducation(resumeContent.education || []);
           setProjects(resumeContent.projects || []);
+          setTemplate(resumeContent.template || 'modern'); // Load the template
         } catch (err: any) {
           setError(err.message);
         } finally {
@@ -95,7 +99,7 @@ export default function BuilderPage() {
     setError('');
 
     const resumeData = {
-      personalInfo, summary, skills, experiences, education, projects,
+      personalInfo, summary, skills, experiences, education, projects, template, // Save the template
     };
     const contentJSON = JSON.stringify(resumeData);
     const title = `${personalInfo.firstName} ${personalInfo.lastName}'s Resume`.trim() === "'s Resume" ? "Untitled Resume" : `${personalInfo.firstName} ${personalInfo.lastName}'s Resume`;
@@ -171,10 +175,12 @@ export default function BuilderPage() {
                   Back to Dashboard
                 </Link>
               </Button>
-              <div className="flex items-center">
-                <FileText className="h-6 w-6 mr-2" />
-                <span className="text-lg font-semibold">Resume Builder</span>
-              </div>
+            </div>
+            {/* NEW: Template Selector */}
+            <div className="flex items-center space-x-2">
+                <Button variant={template === 'modern' ? 'default' : 'outline'} size="sm" onClick={() => setTemplate('modern')}>Modern</Button>
+                <Button variant={template === 'classic' ? 'default' : 'outline'} size="sm" onClick={() => setTemplate('classic')}>Classic</Button>
+                <Button variant={template === 'creative' ? 'default' : 'outline'} size="sm" onClick={() => setTemplate('creative')}>Creative</Button>
             </div>
             <div className="flex items-center space-x-2">
               <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={loading}>
@@ -203,6 +209,7 @@ export default function BuilderPage() {
                 <TabsTrigger value="projects">Projects</TabsTrigger>
               </TabsList>
               
+              {/* All your form TabsContent sections go here, unchanged */}
               <TabsContent value="personal" className="space-y-4">
                 <Card>
                   <CardHeader><CardTitle>Personal Information</CardTitle><CardDescription>Basic information for your resume</CardDescription></CardHeader>
@@ -260,7 +267,7 @@ export default function BuilderPage() {
                 <CardDescription>See how your resume looks in real-time</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResumePreview ref={previewRef} resume={resumeDataForPreview} />
+                <ResumePreview ref={previewRef} resume={resumeDataForPreview} template={template} />
               </CardContent>
             </Card>
           </div>
