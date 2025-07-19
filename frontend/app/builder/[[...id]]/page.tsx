@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react" // Import useRef
 import Link from "next/link"
-import { useRouter, useParams } from "next/navigation" // CORRECTED: Using 'next/navigation' for the App Router
+import { useRouter, useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { FileText, Save, Eye, Download, Plus, X, ArrowLeft } from "lucide-react"
+import jsPDF from "jspdf"
+import html2canvas from "html2canvas"
 
 // Interfaces for your resume data structure
 interface PersonalInfo {
@@ -30,6 +32,7 @@ export default function BuilderPage() {
   const router = useRouter();
   const params = useParams();
   const resumeId = params.id ? params.id[0] : null;
+  const previewRef = useRef<HTMLDivElement>(null); // Ref for the preview component
 
   // All your state hooks
   const [personalInfo, setPersonalInfo] = useState<PersonalInfo>({
@@ -126,6 +129,25 @@ export default function BuilderPage() {
     }
   };
 
+  const handleDownloadPdf = () => {
+    const input = previewRef.current;
+    if (!input) return;
+
+    setLoading(true);
+    // Use html2canvas to render the div as a canvas
+    html2canvas(input, { scale: 2 }) // Higher scale for better resolution
+      .then((canvas: { toDataURL: (arg0: string) => any; height: number; width: number }) => {
+        const imgData = canvas.toDataURL('image/png');
+        // A4 page dimensions in mm: 210 x 297
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`${personalInfo.firstName || "resume"}.pdf`);
+        setLoading(false);
+      });
+  };
+
   // ... (Keep all your other functions: addSkill, removeSkill, etc.)
   const addSkill = () => { if (newSkill.trim() && !skills.includes(newSkill.trim())) { setSkills([...skills, newSkill.trim()]); setNewSkill(""); } };
   const removeSkill = (skill: string) => { setSkills(skills.filter((s) => s !== skill)); };
@@ -166,9 +188,9 @@ export default function BuilderPage() {
                 <Eye className="h-4 w-4 mr-2" />
                 Preview
               </Button>
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={loading}>
                 <Download className="h-4 w-4 mr-2" />
-                Download PDF
+                {loading ? 'Downloading...' : 'Download PDF'}
               </Button>
               <Button size="sm" onClick={handleSave} disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
@@ -193,7 +215,7 @@ export default function BuilderPage() {
                 <TabsTrigger value="skills">Skills</TabsTrigger>
                 <TabsTrigger value="projects">Projects</TabsTrigger>
               </TabsList>
-              {/* ... All your TabsContent components go here, they don't need to be changed ... */}
+              {/* ... All your TabsContent components go here ... */}
                <TabsContent value="personal" className="space-y-4">
                 <Card>
                   <CardHeader>
@@ -392,8 +414,9 @@ export default function BuilderPage() {
                 <CardDescription>See how your resume looks in real-time</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="bg-white border rounded-lg p-6 shadow-sm min-h-[600px] aspect-[8.5/11]">
-                   {/* ... Your entire preview JSX goes here, it doesn't need to be changed ... */}
+                {/* Attach the ref to this div */}
+                <div ref={previewRef} className="bg-white border rounded-lg p-6 shadow-sm min-h-[600px] aspect-[8.5/11]">
+                   {/* ... Your entire preview JSX goes here ... */}
                    <div className="space-y-4">
                     {/* Header */}
                     <div className="text-center border-b pb-4">
