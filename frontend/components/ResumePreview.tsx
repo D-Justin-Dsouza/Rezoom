@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
-import cn from 'classnames'; // A utility for conditionally joining class names
+import cn from 'classnames';
 
 // Interfaces for your resume data structure
 interface PersonalInfo {
@@ -27,11 +27,14 @@ interface ResumeData {
 }
 
 interface ResumePreviewProps {
-  resume?: ResumeData; // Made resume prop optional
-  template: string; // The new template prop
+  resume?: ResumeData; // Making resume prop optional to prevent errors
+  template: string;
 }
 
 const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps>(({ resume = {}, template }, ref) => {
+  // THE FIX: We destructure from the resume prop, providing default empty values for every field.
+  // This ensures that even if `resume` is undefined, these variables will be empty arrays/objects
+  // instead of causing a crash.
   const { personalInfo = {}, summary, skills = [], experiences = [], education = [], projects = [] } = resume;
 
   // Define base classes and template-specific classes
@@ -107,7 +110,54 @@ const ResumePreview = React.forwardRef<HTMLDivElement, ResumePreviewProps>(({ re
                 </div>
             </div>
         )}
-        {/* ... Other sections would follow the same pattern ... */}
+        
+        {/* Education */}
+        {education.length > 0 && (
+            <div>
+                <h2 className={sectionTitleClasses}>Education</h2>
+                <div className="space-y-2">
+                {education.map((edu) => (
+                    <div key={edu.id} className="text-sm">
+                    <div className="flex justify-between items-start">
+                        <div>
+                        <h3 className="font-medium">
+                            {edu.degree || "Degree"} in {edu.field || "Field"}
+                        </h3>
+                        <p className="text-gray-600">{edu.institution || "Institution"}</p>
+                        </div>
+                        <p className="text-gray-500 text-xs text-right">
+                        {edu.startDate} - {edu.endDate}
+                        </p>
+                      </div>
+                      {edu.gpa && <p className="text-gray-700 text-xs">GPA: {edu.gpa}</p>}
+                    </div>
+                ))}
+                </div>
+            </div>
+        )}
+
+        {/* Projects */}
+        {projects.length > 0 && (
+            <div>
+                <h2 className={sectionTitleClasses}>Projects</h2>
+                <div className="space-y-3">
+                {projects.map((project) => (
+                    <div key={project.id} className="text-sm">
+                    <h3 className="font-medium">{project.name || "Project Name"}</h3>
+                    {project.description && <p className="text-gray-700 mt-1 text-xs">{project.description}</p>}
+                    <div className="flex space-x-4 mt-1">
+                        {project.url && (
+                        <a href={project.url} className="text-blue-600 text-xs hover:underline">Live Demo</a>
+                        )}
+                        {project.github && (
+                        <a href={project.github} className="text-blue-600 text-xs hover:underline">GitHub</a>
+                        )}
+                      </div>
+                    </div>
+                ))}
+                </div>
+            </div>
+        )}
       </div>
     </div>
   );
