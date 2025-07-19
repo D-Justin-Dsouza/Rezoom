@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation" // CORRECTED: Using 'next/navigation' for the App Router
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -69,6 +70,62 @@ export default function BuilderPage() {
   const [experiences, setExperiences] = useState<Experience[]>([])
   const [education, setEducation] = useState<Education[]>([])
   const [projects, setProjects] = useState<Project[]>([])
+
+  // State for handling API calls
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const router = useRouter();
+
+  const handleSave = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    // 1. Consolidate all resume data into a single object
+    const resumeData = {
+      personalInfo,
+      summary,
+      skills,
+      experiences,
+      education,
+      projects,
+    };
+
+    // 2. Convert the data object into a JSON string
+    const contentJSON = JSON.stringify(resumeData);
+
+    try {
+      const response = await fetch('http://localhost:8080/api/resumes', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title: `${personalInfo.firstName} ${personalInfo.lastName}'s Resume` || "Untitled Resume",
+          content: contentJSON,
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to save resume.');
+      }
+
+      // 3. On success, redirect back to the dashboard
+      router.push('/dashboard');
+
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const addSkill = () => {
     if (newSkill.trim() && !skills.includes(newSkill.trim())) {
@@ -146,7 +203,7 @@ export default function BuilderPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm border-b">
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
@@ -170,9 +227,9 @@ export default function BuilderPage() {
                 <Download className="h-4 w-4 mr-2" />
                 Download PDF
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={handleSave} disabled={loading}>
                 <Save className="h-4 w-4 mr-2" />
-                Save
+                {loading ? 'Saving...' : 'Save'}
               </Button>
             </div>
           </div>
@@ -181,6 +238,7 @@ export default function BuilderPage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {error && <div className="bg-red-100 text-red-700 p-3 rounded-md mb-4">{error}</div>}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Form Section */}
           <div className="space-y-6">
@@ -575,30 +633,32 @@ export default function BuilderPage() {
           </div>
 
           {/* Preview Section */}
-          <div className="lg:sticky lg:top-8">
+          <div className="lg:sticky lg:top-24">
             <Card className="h-fit">
               <CardHeader>
                 <CardTitle>Live Preview</CardTitle>
                 <CardDescription>See how your resume looks in real-time</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="bg-white border rounded-lg p-6 shadow-sm min-h-[600px]">
+                <div className="bg-white border rounded-lg p-6 shadow-sm min-h-[600px] aspect-[8.5/11]">
                   {/* Resume Preview */}
                   <div className="space-y-4">
                     {/* Header */}
                     <div className="text-center border-b pb-4">
                       <h1 className="text-2xl font-bold">
-                        {personalInfo.firstName} {personalInfo.lastName}
+                        {personalInfo.firstName || "Your"}{" "}{personalInfo.lastName || "Name"}
                       </h1>
-                      {personalInfo.email && <p className="text-gray-600">{personalInfo.email}</p>}
-                      {personalInfo.phone && <p className="text-gray-600">{personalInfo.phone}</p>}
-                      {personalInfo.location && <p className="text-gray-600">{personalInfo.location}</p>}
+                      <div className="flex justify-center flex-wrap gap-x-3 text-xs text-gray-600">
+                        {personalInfo.email && <span>{personalInfo.email}</span>}
+                        {personalInfo.phone && <span>• {personalInfo.phone}</span>}
+                        {personalInfo.location && <span>• {personalInfo.location}</span>}
+                      </div>
                     </div>
 
                     {/* Summary */}
                     {summary && (
                       <div>
-                        <h2 className="text-lg font-semibold mb-2">Professional Summary</h2>
+                        <h2 className="text-lg font-semibold mb-2 border-b">Professional Summary</h2>
                         <p className="text-sm text-gray-700">{summary}</p>
                       </div>
                     )}
@@ -606,7 +666,7 @@ export default function BuilderPage() {
                     {/* Skills */}
                     {skills.length > 0 && (
                       <div>
-                        <h2 className="text-lg font-semibold mb-2">Skills</h2>
+                        <h2 className="text-lg font-semibold mb-2 border-b">Skills</h2>
                         <div className="flex flex-wrap gap-1">
                           {skills.map((skill) => (
                             <Badge key={skill} variant="outline" className="text-xs">
@@ -620,20 +680,20 @@ export default function BuilderPage() {
                     {/* Experience */}
                     {experiences.length > 0 && (
                       <div>
-                        <h2 className="text-lg font-semibold mb-2">Experience</h2>
+                        <h2 className="text-lg font-semibold mb-2 border-b">Experience</h2>
                         <div className="space-y-3">
                           {experiences.map((exp) => (
                             <div key={exp.id} className="text-sm">
                               <div className="flex justify-between items-start">
                                 <div>
-                                  <h3 className="font-medium">{exp.position}</h3>
-                                  <p className="text-gray-600">{exp.company}</p>
+                                  <h3 className="font-medium">{exp.position || "Position"}</h3>
+                                  <p className="text-gray-600">{exp.company || "Company"}</p>
                                 </div>
-                                <p className="text-gray-500 text-xs">
+                                <p className="text-gray-500 text-xs text-right">
                                   {exp.startDate} - {exp.current ? "Present" : exp.endDate}
                                 </p>
                               </div>
-                              {exp.description && <p className="text-gray-700 mt-1">{exp.description}</p>}
+                              {exp.description && <p className="text-gray-700 mt-1 text-xs">{exp.description}</p>}
                             </div>
                           ))}
                         </div>
@@ -643,22 +703,22 @@ export default function BuilderPage() {
                     {/* Education */}
                     {education.length > 0 && (
                       <div>
-                        <h2 className="text-lg font-semibold mb-2">Education</h2>
+                        <h2 className="text-lg font-semibold mb-2 border-b">Education</h2>
                         <div className="space-y-2">
                           {education.map((edu) => (
                             <div key={edu.id} className="text-sm">
                               <div className="flex justify-between items-start">
                                 <div>
                                   <h3 className="font-medium">
-                                    {edu.degree} in {edu.field}
+                                    {edu.degree || "Degree"} in {edu.field || "Field"}
                                   </h3>
-                                  <p className="text-gray-600">{edu.institution}</p>
+                                  <p className="text-gray-600">{edu.institution || "Institution"}</p>
                                 </div>
-                                <p className="text-gray-500 text-xs">
+                                <p className="text-gray-500 text-xs text-right">
                                   {edu.startDate} - {edu.endDate}
                                 </p>
                               </div>
-                              {edu.gpa && <p className="text-gray-700">GPA: {edu.gpa}</p>}
+                              {edu.gpa && <p className="text-gray-700 text-xs">GPA: {edu.gpa}</p>}
                             </div>
                           ))}
                         </div>
@@ -668,12 +728,12 @@ export default function BuilderPage() {
                     {/* Projects */}
                     {projects.length > 0 && (
                       <div>
-                        <h2 className="text-lg font-semibold mb-2">Projects</h2>
+                        <h2 className="text-lg font-semibold mb-2 border-b">Projects</h2>
                         <div className="space-y-3">
                           {projects.map((project) => (
                             <div key={project.id} className="text-sm">
-                              <h3 className="font-medium">{project.name}</h3>
-                              {project.description && <p className="text-gray-700 mt-1">{project.description}</p>}
+                              <h3 className="font-medium">{project.name || "Project Name"}</h3>
+                              {project.description && <p className="text-gray-700 mt-1 text-xs">{project.description}</p>}
                               <div className="flex space-x-4 mt-1">
                                 {project.url && (
                                   <a href={project.url} className="text-blue-600 text-xs hover:underline">

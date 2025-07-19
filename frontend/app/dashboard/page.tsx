@@ -1,51 +1,92 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation" // Using 'next/navigation' for the App Router
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { FileText, Plus, MoreHorizontal, Eye, Download, Share, Edit, Trash2, Globe } from "lucide-react"
 
+// This interface now matches our Go model's JSON output
 interface Portfolio {
-  id: string
-  title: string
-  template: string
-  lastModified: string
-  status: "draft" | "published"
-  url?: string
+  ID: string; // Changed from id to ID
+  title: string;
+  // These are placeholder fields until we add them to the backend
+  template: string;
+  lastModified: string;
+  status: "draft" | "published";
+  url?: string;
 }
 
 export default function DashboardPage() {
-  const [portfolios, setPortfolios] = useState<Portfolio[]>([
-    {
-      id: "1",
-      title: "Software Developer Resume",
-      template: "Modern Professional",
-      lastModified: "2 hours ago",
-      status: "published",
-      url: "https://resume.example.com/john-doe",
-    },
-    {
-      id: "2",
-      title: "Creative Portfolio",
-      template: "Creative Portfolio",
-      lastModified: "1 day ago",
-      status: "draft",
-    },
-    {
-      id: "3",
-      title: "Executive Resume",
-      template: "Executive Classic",
-      lastModified: "3 days ago",
-      status: "published",
-      url: "https://resume.example.com/john-doe-exec",
-    },
-  ])
+  // The initial state is now an empty array
+  const [portfolios, setPortfolios] = useState<Portfolio[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const router = useRouter();
+
+  // This hook runs once when the component mounts to fetch data
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    const fetchResumes = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/resumes', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            localStorage.removeItem('token');
+            router.push('/login');
+          }
+          throw new Error('Failed to fetch your resumes. Please try logging in again.');
+        }
+
+        const data = await response.json();
+        // Map the backend data to our frontend interface
+        const formattedPortfolios = (data.resumes || []).map((p: any) => ({
+          ...p,
+          template: "Modern Professional", // Placeholder
+          lastModified: new Date(p.UpdatedAt).toLocaleDateString(),
+          status: 'published', // Placeholder
+        }));
+        setPortfolios(formattedPortfolios);
+
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchResumes();
+  }, [router]);
 
   const handleDelete = (id: string) => {
-    setPortfolios(portfolios.filter((p) => p.id !== id))
+    // This will require a DELETE /api/resumes/:id endpoint in the future
+    setPortfolios(portfolios.filter((p) => p.ID !== id));
+  };
+
+  const handleSignOut = () => {
+    localStorage.removeItem('token');
+    router.push('/login');
+  };
+
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">Loading your dashboard...</div>;
+  }
+
+  if (error) {
+    return <div className="flex h-screen items-center justify-center text-red-500">Error: {error}</div>;
   }
 
   return (
@@ -70,7 +111,7 @@ export default function DashboardPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm">
-                    <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-white text-sm font-medium">
+                    <div className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center text-white text-sm font-medium">
                       JD
                     </div>
                   </Button>
@@ -78,7 +119,7 @@ export default function DashboardPage() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem>Profile Settings</DropdownMenuItem>
                   <DropdownMenuItem>Account</DropdownMenuItem>
-                  <DropdownMenuItem>Sign Out</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleSignOut}>Sign Out</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -127,7 +168,7 @@ export default function DashboardPage() {
         {/* Portfolios Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {portfolios.map((portfolio) => (
-            <Card key={portfolio.id} className="hover:shadow-lg transition-shadow">
+            <Card key={portfolio.ID} className="hover:shadow-lg transition-shadow">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -142,7 +183,7 @@ export default function DashboardPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem asChild>
-                        <Link href={`/builder/${portfolio.id}`}>
+                        <Link href={`/builder/${portfolio.ID}`}>
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </Link>
@@ -161,7 +202,7 @@ export default function DashboardPage() {
                           Share URL
                         </DropdownMenuItem>
                       )}
-                      <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(portfolio.id)}>
+                      <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(portfolio.ID)}>
                         <Trash2 className="h-4 w-4 mr-2" />
                         Delete
                       </DropdownMenuItem>
@@ -182,7 +223,7 @@ export default function DashboardPage() {
                   )}
                   <div className="flex space-x-2">
                     <Button size="sm" variant="outline" asChild className="flex-1 bg-transparent">
-                      <Link href={`/builder/${portfolio.id}`}>
+                      <Link href={`/builder/${portfolio.ID}`}>
                         <Edit className="h-4 w-4 mr-2" />
                         Edit
                       </Link>

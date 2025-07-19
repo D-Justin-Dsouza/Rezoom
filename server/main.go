@@ -22,8 +22,17 @@ func main() {
 
 	api := router.Group("/api")
 	{
+		// Public routes
 		api.POST("/register", controllers.Register)
 		api.POST("/login", controllers.Login)
+
+		// Protected routes
+		protected := api.Group("/")
+		protected.Use(controllers.AuthMiddleware())
+		{
+			protected.POST("/resumes", controllers.CreateResume)
+			protected.GET("/resumes", controllers.GetResumes)
+		}
 	}
 
 	log.Println("Starting Go API server on http://localhost:8080")

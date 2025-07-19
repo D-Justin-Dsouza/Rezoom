@@ -16,6 +16,6 @@ func Connect() {
 	}
 	log.Println("Database connection established.")
 	// This line reads our User model and automatically creates the 'users' table in the database with the correct columns.
-	DB.AutoMigrate(&models.User{})
+	DB.AutoMigrate(&models.User{}, &models.Resume{})
 	log.Println("Database migrated.")
 }
